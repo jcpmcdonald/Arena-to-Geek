@@ -1,17 +1,16 @@
-// import axios from "axios";
-// import fetchAdapter from "./adapter";
-
-// axios.defaults.adapter = fetchAdapter;
+import { parsePlayers } from "./gamesHistoryPage";
+import { parseDateAndTime } from "./parseBGADate";
+import { recordBGGPlay } from "./recordBGGPlay";
 
 // Memory
 let arenaToGeekPlayerNames: { [key: string]: string } = {};
 let alreadyRecordedTables: { [key: string]: string } = {};
 let arenaGameNameToBggId: { [key: string]: string } = {};
 
-const DEBUG = true;
-const actuallyRecord = true;
+export const DEBUG = true;
+export const actuallyRecord = true;
 
-const log = (...data: any[]) => {
+export const log = (...data: any[]) => {
   if (DEBUG) {
     console.log(...data);
   }
@@ -70,73 +69,40 @@ const waitForElementToDisplay = async (selector: string, time: number) => {
 };
 
 const recordPlay = async (e: any) => {
-  let row = e.target.parentElement.parentElement;
-  let btnCell = e.target.parentElement;
+  const row = e.target.parentElement.parentElement;
+  const btnCell = e.target.parentElement;
 
   btnCell.innerHTML = "Recording...";
 
-  let tableId = row.querySelector(".table_name.smalltext").textContent;
-  let gameName = String(row.querySelector(".gamename").textContent);
-  let date = parseDateAndTime(
-    row.querySelector("td:nth-child(2) :first-child").textContent
-  );
-  let playdate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
-    2,
-    "0"
-  )}-${String(date.getDate()).padStart(2, "0")}`;
+  const tableId = row.querySelector(".table_name.smalltext").textContent;
+  const gameName = String(row.querySelector(".gamename").textContent);
 
-  let playData = {
-    date: date.toISOString(),
-    playdate: playdate,
+  const playLink = await recordBGGPlay({
+    date: parseDateAndTime(
+      row.querySelector("td:nth-child(2) :first-child").textContent
+    ),
     length: String(
       row.querySelector("td:nth-child(2) :nth-child(2)").textContent
     ).split(" mn")[0],
     players: parsePlayers(row.querySelector("td:nth-child(3)")),
     incomplete: isIncomplete(row.querySelector("td:nth-child(4)")),
-    objecttype: "thing",
     objectid: await getBGGId(gameName),
     comments: `https://boardgamearena.com${row
       .querySelector("td:first-child a.table_name")
       .getAttribute("href")}`,
-    location: "BoardGameArena",
-    ajax: 1,
-    action: "save",
-  };
-
-  if (!actuallyRecord) {
-    console.log("Not actually recording play", playData);
-    btnCell.innerHTML = "Not actually<br/>Recorded";
-    return;
-  }
-
-  log("Recording play:", playData);
-  GM_xmlhttpRequest({
-    method: "POST",
-    url: "https://boardgamegeek.com/geekplay.php",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    data: JSON.stringify(playData),
-    onload: function (response) {
-      log(response.response);
-      const data = JSON.parse(response.response);
-      let correctedLinkToBGG = data.html.replace(
-        /\"\/plays/,
-        "http://boardgamegeek.com/plays"
-      );
-      btnCell.innerHTML = correctedLinkToBGG;
-      setTableAsRecorded(tableId, correctedLinkToBGG);
-    },
   });
+
+  btnCell.innerHTML = playLink;
+  setTableAsRecorded(tableId, playLink);
 };
 
-const getBGGId = async (gameName: string) => {
+const getBGGId = async (gameName: string): Promise<string> => {
   if (arenaGameNameToBggId[gameName] && arenaGameNameToBggId[gameName] !== "") {
     return arenaGameNameToBggId[gameName];
   }
 
   return new Promise((resolve, reject) => {
-    GM_xmlhttpRequest({
+    GM.xmlHttpRequest({
       method: "GET",
       url: `https://boardgamegeek.com/xmlapi2/search?type=boardgame&exact=1&query=${gameName}`,
       headers: {
@@ -144,12 +110,12 @@ const getBGGId = async (gameName: string) => {
       },
       onload: function (response) {
         try {
-          let parser = new DOMParser();
-          let xmlDoc = parser.parseFromString(
+          const parser = new DOMParser();
+          const xmlDoc = parser.parseFromString(
             response.responseText,
             "text/xml"
           );
-          var bggId = xmlDoc
+          const bggId = xmlDoc
             .querySelector("item")!
             .attributes.getNamedItem("id")!.value;
           setBggIdForGame(gameName, bggId);
@@ -173,95 +139,6 @@ const getBGGId = async (gameName: string) => {
       },
     });
   });
-};
-
-// Returns a date object from a date and time string
-// "11/01/2021 at 12:34" OR "2021/11/01 at 12:34", dependant on a setting in BGA
-// "today at 12:37"
-// "23 minutes ago"
-const parseDateAndTime = (dateAndTimeString: string) => {
-  const MS_PER_MINUTE = 60000;
-  const MS_PER_HOUR = MS_PER_MINUTE * 60;
-  let [dateString, timeString] = String(dateAndTimeString).split(" at ");
-  const xMinsAgoRegex = /(\d\d?) minutes? ago/i;
-  const xHoursAgoRegex = /(\d) hours? ago/i;
-
-  // let [month, day, year] = [];
-  let year = "";
-  let month = "";
-  let day = "";
-  if (dateString === "today") {
-    let now = new Date();
-    day = now.getDate().toString();
-    month = (now.getMonth() + 1).toString();
-    year = now.getFullYear().toString();
-  } else if (dateString === "yesterday") {
-    let yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    day = yesterday.getDate().toString();
-    month = (yesterday.getMonth() + 1).toString();
-    year = yesterday.getFullYear().toString();
-  } else if (dateString.match(xMinsAgoRegex)) {
-    const minsAgo = Number(dateString.match(xMinsAgoRegex)![1]);
-    let now = new Date(new Date().valueOf() - minsAgo * MS_PER_MINUTE);
-    return now;
-  } else if (dateString.match(xHoursAgoRegex)) {
-    const hoursAgo = Number(dateString.match(xHoursAgoRegex)![1]);
-    let now = new Date(new Date().valueOf() - hoursAgo * MS_PER_HOUR);
-    return now;
-  } else if (dateString === "one hour ago") {
-    let now = new Date(new Date().valueOf() - 1 * MS_PER_HOUR);
-    return now;
-  } else {
-    //[month, day, year] = dateString.split("/");
-    [year, month, day] = dateString.split("-");
-  }
-
-  let [hour, minute] = timeString.split(":");
-
-  return new Date(
-    Number(year),
-    Number(month) - 1,
-    Number(day),
-    Number(hour),
-    Number(minute)
-  );
-};
-
-type Player = {
-  rank: string;
-  name: string;
-  username: string;
-  score: string;
-  win: boolean;
-};
-
-const parsePlayers = (playersCell: any) => {
-  let playerCells = playersCell.querySelectorAll("div .simple-score-entry");
-  let players: Player[] = [];
-  [...playerCells].forEach((playerCell, i) => {
-    let player = {
-      rank: playerCell.querySelector("div .rank").textContent,
-      name: getGeekAliasForArenaPlayer(
-        playerCell.querySelector("div a").textContent
-      ),
-      username: getGeekUsername(playerCell.querySelector("div a").textContent),
-      score: playerCell.querySelector("div .score").textContent,
-      win: false,
-    };
-    player.win = player.rank === "1st";
-    players.push(player);
-  });
-
-  return players;
-};
-
-const getGeekUsername = (arenaPlayerName: string) => {
-  // TODO: Lookup BGG usernames
-  if (arenaPlayerName === "jcpmcdonald") {
-    return "jcpmcdonald";
-  }
-  return "";
 };
 
 const isIncomplete = (completedStatus: any) => {
@@ -297,7 +174,7 @@ const showBggAliasOnProfile = () => {
   playerHeader.appendChild(cell);
 };
 
-const getGeekAliasForArenaPlayer = (arenaPlayerName: string) => {
+export const getGeekAliasForArenaPlayer = (arenaPlayerName: string) => {
   if (arenaToGeekPlayerNames[arenaPlayerName]) {
     return arenaToGeekPlayerNames[arenaPlayerName];
   }
@@ -370,7 +247,10 @@ const isTableAlreadyRecorded = (tableNumber: string) => {
   return alreadyRecordedTables[tableNumber];
 };
 
-const setTableAsRecorded = (tableNumber: string, bggPlaysLink: string) => {
+export const setTableAsRecorded = (
+  tableNumber: string,
+  bggPlaysLink: string
+) => {
   tableNumber = tableNumber.replace(/^#/, "");
   alreadyRecordedTables[tableNumber] = bggPlaysLink;
   GM_setValue("alreadyRecordedTables", JSON.stringify(alreadyRecordedTables));

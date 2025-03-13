@@ -39,14 +39,21 @@
     "namespace": "http://tampermonkey.net/",
     "license": "https://opensource.org/licenses/MIT",
     "match": [
-      "https://boardgamearena.com/gamestats?player=*"
+      "https://boardgamearena.com/gamestats*",
+      "https://boardgamearena.com/player*",
+      "https://boardgamearena.com/gamepanel*",
+      "https://boardgamearena.com/table*"
     ],
     "require": [],
     "grant": [
       "GM.xmlHttpRequest",
       "GM.setValue",
       "GM.getValue",
-      "GM.addStyle"
+      "GM.addStyle",
+      "GM_xmlHttpRequest",
+      "GM_setValue",
+      "GM_getValue",
+      "GM_addStyle"
     ],
     "exclude": [],
     "resources": [],
