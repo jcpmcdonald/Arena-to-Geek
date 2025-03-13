@@ -1,5 +1,50 @@
-import { actuallyRecord, log } from ".";
+import { arenaGameNameToBggId, setBggIdForGame, actuallyRecord, log } from ".";
 import { Player } from "./types";
+
+export const getBGGId = async (gameName: string): Promise<string> => {
+  if (arenaGameNameToBggId[gameName] && arenaGameNameToBggId[gameName] !== "") {
+    return arenaGameNameToBggId[gameName];
+  }
+
+  return new Promise((resolve, reject) => {
+    GM.xmlHttpRequest({
+      method: "GET",
+      url: `https://boardgamegeek.com/xmlapi2/search?type=boardgame&exact=1&query=${gameName}`,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      onload: function (response) {
+        try {
+          const parser = new DOMParser();
+          const xmlDoc = parser.parseFromString(
+            response.responseText,
+            "text/xml"
+          );
+          const bggId = xmlDoc
+            .querySelector("item")!
+            .attributes.getNamedItem("id")!.value;
+          setBggIdForGame(gameName, bggId);
+          resolve(bggId);
+        } catch (e) {
+          let bggId = prompt(
+            "Could not find BGG ID for " +
+              gameName +
+              ". Please provide it manually."
+          );
+          if (bggId != null) {
+            setBggIdForGame(gameName, bggId);
+            resolve(bggId);
+          } else {
+            reject();
+          }
+        }
+      },
+      onerror: function () {
+        reject();
+      },
+    });
+  });
+};
 
 type Play = {
   date: Date;

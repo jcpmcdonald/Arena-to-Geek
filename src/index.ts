@@ -1,11 +1,15 @@
-import { parsePlayers } from "./gamesHistoryPage";
-import { parseDateAndTime } from "./parseBGADate";
-import { recordBGGPlay } from "./recordBGGPlay";
+import { displayCopyPlayButtons } from "./pages/gamesHistoryPage";
 
 // Memory
-let arenaToGeekPlayerNames: { [key: string]: string } = {};
-let alreadyRecordedTables: { [key: string]: string } = {};
-let arenaGameNameToBggId: { [key: string]: string } = {};
+export const arenaToGeekPlayerNames: { [key: string]: string } = JSON.parse(
+  GM_getValue("arenaToGeekPlayerNames", "{}")
+);
+export const alreadyRecordedTables: { [key: string]: string } = JSON.parse(
+  GM_getValue("alreadyRecordedTables", "{}")
+);
+export const arenaGameNameToBggId: { [key: string]: string } = JSON.parse(
+  GM_getValue("arenaGameNameToBggId", "{}")
+);
 
 export const DEBUG = true;
 export const actuallyRecord = true;
@@ -14,45 +18,6 @@ export const log = (...data: any[]) => {
   if (DEBUG) {
     console.log(...data);
   }
-};
-
-const displayCopyPlayButtons = async () => {
-  [...document.querySelectorAll("#gamelist_inner tr")].forEach((row, i) => {
-    if (!row.getAttribute("bga2bgg")) {
-      // Show the BGG alias in-line
-      const playerNameCell = row.querySelectorAll("td:nth-child(3) .name");
-      [...playerNameCell].forEach((cell, i) => {
-        let arenaName = cell.querySelector("a")!.textContent!;
-        let geekAlias = getGeekAliasForArenaPlayer(arenaName);
-        if (geekAlias !== arenaName) {
-          const aliasDiv = document.createElement("span");
-          aliasDiv.textContent = ` (${geekAlias})`;
-          cell.appendChild(aliasDiv);
-        }
-      });
-
-      let tableId = row.querySelector(".table_name.smalltext")!.textContent!;
-
-      const bggLink = isTableAlreadyRecorded(tableId);
-      if (bggLink) {
-        const cell = document.createElement("td");
-        cell.innerHTML = bggLink;
-        row.appendChild(cell);
-      } else {
-        const input = document.createElement("button");
-        input.textContent = "Record Play";
-        input.style.backgroundColor = "grey";
-        input.style.color = "white";
-        input.addEventListener("click", recordPlay);
-
-        const cell = document.createElement("td");
-        cell.appendChild(input);
-        row.appendChild(cell);
-      }
-
-      row.setAttribute("bga2bgg", "true");
-    }
-  });
 };
 
 const sleep = (ms: number) => {
@@ -66,89 +31,6 @@ const waitForElementToDisplay = async (selector: string, time: number) => {
     element = document.querySelector(selector);
   }
   return Promise.resolve();
-};
-
-const recordPlay = async (e: any) => {
-  const row = e.target.parentElement.parentElement;
-  const btnCell = e.target.parentElement;
-
-  btnCell.innerHTML = "Recording...";
-
-  const tableId = row.querySelector(".table_name.smalltext").textContent;
-  const gameName = String(row.querySelector(".gamename").textContent);
-
-  const playLink = await recordBGGPlay({
-    date: parseDateAndTime(
-      row.querySelector("td:nth-child(2) :first-child").textContent
-    ),
-    length: String(
-      row.querySelector("td:nth-child(2) :nth-child(2)").textContent
-    ).split(" mn")[0],
-    players: parsePlayers(row.querySelector("td:nth-child(3)")),
-    incomplete: isIncomplete(row.querySelector("td:nth-child(4)")),
-    objectid: await getBGGId(gameName),
-    comments: `https://boardgamearena.com${row
-      .querySelector("td:first-child a.table_name")
-      .getAttribute("href")}`,
-  });
-
-  btnCell.innerHTML = playLink;
-  setTableAsRecorded(tableId, playLink);
-};
-
-const getBGGId = async (gameName: string): Promise<string> => {
-  if (arenaGameNameToBggId[gameName] && arenaGameNameToBggId[gameName] !== "") {
-    return arenaGameNameToBggId[gameName];
-  }
-
-  return new Promise((resolve, reject) => {
-    GM.xmlHttpRequest({
-      method: "GET",
-      url: `https://boardgamegeek.com/xmlapi2/search?type=boardgame&exact=1&query=${gameName}`,
-      headers: {
-        "Content-Type": "application/json",
-      },
-      onload: function (response) {
-        try {
-          const parser = new DOMParser();
-          const xmlDoc = parser.parseFromString(
-            response.responseText,
-            "text/xml"
-          );
-          const bggId = xmlDoc
-            .querySelector("item")!
-            .attributes.getNamedItem("id")!.value;
-          setBggIdForGame(gameName, bggId);
-          resolve(bggId);
-        } catch (e) {
-          let bggId = prompt(
-            "Could not find BGG ID for " +
-              gameName +
-              ". Please provide it manually."
-          );
-          if (bggId != null) {
-            setBggIdForGame(gameName, bggId);
-            resolve(bggId);
-          } else {
-            reject();
-          }
-        }
-      },
-      onerror: function () {
-        reject();
-      },
-    });
-  });
-};
-
-const isIncomplete = (completedStatus: any) => {
-  if (
-    completedStatus.querySelector("div.smalltext span.smalltext")
-      ?.textContent === "(Game abandoned)"
-  ) {
-    return true;
-  }
-  return false;
 };
 
 const showBggAliasOnProfile = () => {
@@ -237,12 +119,12 @@ const getBggIdForGame = (arenaGameName: string) => {
   return "";
 };
 
-const setBggIdForGame = (arenaGameName: string, bggId: string) => {
+export const setBggIdForGame = (arenaGameName: string, bggId: string) => {
   arenaGameNameToBggId[arenaGameName] = bggId.trim();
   GM_setValue("arenaGameNameToBggId", JSON.stringify(arenaGameNameToBggId));
 };
 
-const isTableAlreadyRecorded = (tableNumber: string) => {
+export const isTableAlreadyRecorded = (tableNumber: string) => {
   tableNumber = tableNumber.replace(/^#/, "");
   return alreadyRecordedTables[tableNumber];
 };
@@ -266,15 +148,38 @@ const forgetTableAsRecorded = (tableNumber: string) => {
 async function main() {
   "use strict";
 
-  arenaToGeekPlayerNames = JSON.parse(
-    GM_getValue("arenaToGeekPlayerNames", "{}")
-  );
+  (() => {
+    let oldPushState = history.pushState;
+    history.pushState = function pushState() {
+      // @ts-expect-error
+      let ret = oldPushState.apply(this, arguments);
+      // window.dispatchEvent(new Event("pushstate"));
+      window.dispatchEvent(new Event("locationchange"));
+      return ret;
+    };
 
-  alreadyRecordedTables = JSON.parse(
-    GM_getValue("alreadyRecordedTables", "{}")
-  );
+    let oldReplaceState = history.replaceState;
+    history.replaceState = function replaceState() {
+      // @ts-expect-error
+      let ret = oldReplaceState.apply(this, arguments);
+      // window.dispatchEvent(new Event("replacestate"));
+      window.dispatchEvent(new Event("locationchange"));
+      return ret;
+    };
 
-  arenaGameNameToBggId = JSON.parse(GM_getValue("arenaGameNameToBggId", "{}"));
+    window.addEventListener("popstate", () => {
+      window.dispatchEvent(new Event("locationchange"));
+    });
+  })();
+
+  window.addEventListener("locationchange", function () {
+    console.log("location changed!");
+  });
+
+  // Only works in chrome
+  // window.navigation.addEventListener("navigate", (event) => {
+  //   console.log("location changed!");
+  // });
 
   const location = window.location.href;
   if (location.startsWith("https://boardgamearena.com/gamestats")) {
