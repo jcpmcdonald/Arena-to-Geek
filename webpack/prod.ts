@@ -1,16 +1,16 @@
-import { merge } from 'webpack-merge';
-import base from './base';
-import path from 'node:path';
+import { merge } from "webpack-merge";
+import base from "./base";
+import path from "node:path";
 
 export default merge(base, {
-    mode: 'production',
+    mode: "production",
     cache: {
-        type: 'filesystem',
-        name: 'prod',
+        type: "filesystem",
+        name: "prod",
     },
     output: {
         path: path.resolve(".", "userscripts"),
-        filename: "index.prod.user.js",
+        filename: "arena-to-geek.prod.user.js",
     },
     watchOptions: {
         ignored: /node_modules/,

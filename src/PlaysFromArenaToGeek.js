@@ -1,17 +1,26 @@
-// import axios from "axios";
-// import fetchAdapter from "./adapter";
-
-// axios.defaults.adapter = fetchAdapter;
+// Include this file in a greasemonkey script:
+// @name         Plays From Arena to Geek
+// @namespace    http://jcpmcdonald.com
+// @version      2025-03-12
+// @description  Copy plays from Board Game Arena to Board Game Geek
+// @author       John McDonald
+// @match        https://boardgamearena.com/gamestats?player=14724293
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=boardgamearena.com
+// @grant        GM_xmlhttpRequest
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_addStyle
+// @require      file://G:/My Drive/Greasemonkey/PlaysFromArenaToGeek.js
 
 // Memory
-let arenaToGeekPlayerNames: { [key: string]: string } = {};
-let alreadyRecordedTables: { [key: string]: string } = {};
-let arenaGameNameToBggId: { [key: string]: string } = {};
+let arenaToGeekPlayerNames = {};
+let alreadyRecordedTables = {};
+let arenaGameNameToBggId = {};
 
 const DEBUG = true;
 const actuallyRecord = true;
 
-const log = (...data: any[]) => {
+const log = (...data) => {
   if (DEBUG) {
     console.log(...data);
   }
@@ -23,7 +32,7 @@ const displayCopyPlayButtons = async () => {
       // Show the BGG alias in-line
       const playerNameCell = row.querySelectorAll("td:nth-child(3) .name");
       [...playerNameCell].forEach((cell, i) => {
-        let arenaName = cell.querySelector("a")!.textContent!;
+        let arenaName = cell.querySelector("a").textContent;
         let geekAlias = getGeekAliasForArenaPlayer(arenaName);
         if (geekAlias !== arenaName) {
           const aliasDiv = document.createElement("span");
@@ -32,7 +41,7 @@ const displayCopyPlayButtons = async () => {
         }
       });
 
-      let tableId = row.querySelector(".table_name.smalltext")!.textContent!;
+      let tableId = row.querySelector(".table_name.smalltext").textContent;
 
       const bggLink = isTableAlreadyRecorded(tableId);
       if (bggLink) {
@@ -56,11 +65,11 @@ const displayCopyPlayButtons = async () => {
   });
 };
 
-const sleep = (ms: number) => {
+const sleep = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
-const waitForElementToDisplay = async (selector: string, time: number) => {
+const waitForElementToDisplay = async (selector, time) => {
   let element = document.querySelector(selector);
   while (element === null) {
     await sleep(time);
@@ -69,7 +78,7 @@ const waitForElementToDisplay = async (selector: string, time: number) => {
   return Promise.resolve();
 };
 
-const recordPlay = async (e: any) => {
+const recordPlay = async (e) => {
   let row = e.target.parentElement.parentElement;
   let btnCell = e.target.parentElement;
 
@@ -130,7 +139,7 @@ const recordPlay = async (e: any) => {
   });
 };
 
-const getBGGId = async (gameName: string) => {
+const getBGGId = async (gameName) => {
   if (arenaGameNameToBggId[gameName] && arenaGameNameToBggId[gameName] !== "") {
     return arenaGameNameToBggId[gameName];
   }
@@ -150,8 +159,8 @@ const getBGGId = async (gameName: string) => {
             "text/xml"
           );
           var bggId = xmlDoc
-            .querySelector("item")!
-            .attributes.getNamedItem("id")!.value;
+            .querySelector("item")
+            .attributes.getNamedItem("id").value;
           setBggIdForGame(gameName, bggId);
           resolve(bggId);
         } catch (e) {
@@ -179,34 +188,31 @@ const getBGGId = async (gameName: string) => {
 // "11/01/2021 at 12:34" OR "2021/11/01 at 12:34", dependant on a setting in BGA
 // "today at 12:37"
 // "23 minutes ago"
-const parseDateAndTime = (dateAndTimeString: string) => {
+const parseDateAndTime = (dateAndTimeString) => {
   const MS_PER_MINUTE = 60000;
   const MS_PER_HOUR = MS_PER_MINUTE * 60;
   let [dateString, timeString] = String(dateAndTimeString).split(" at ");
   const xMinsAgoRegex = /(\d\d?) minutes? ago/i;
   const xHoursAgoRegex = /(\d) hours? ago/i;
 
-  // let [month, day, year] = [];
-  let year = "";
-  let month = "";
-  let day = "";
+  let [month, day, year] = [];
   if (dateString === "today") {
     let now = new Date();
-    day = now.getDate().toString();
-    month = (now.getMonth() + 1).toString();
-    year = now.getFullYear().toString();
+    day = now.getDate();
+    month = now.getMonth() + 1;
+    year = now.getFullYear();
   } else if (dateString === "yesterday") {
     let yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    day = yesterday.getDate().toString();
-    month = (yesterday.getMonth() + 1).toString();
-    year = yesterday.getFullYear().toString();
+    day = yesterday.getDate();
+    month = yesterday.getMonth() + 1;
+    year = yesterday.getFullYear();
   } else if (dateString.match(xMinsAgoRegex)) {
-    const minsAgo = Number(dateString.match(xMinsAgoRegex)![1]);
+    const minsAgo = dateString.match(xMinsAgoRegex)[1];
     let now = new Date(new Date().valueOf() - minsAgo * MS_PER_MINUTE);
     return now;
   } else if (dateString.match(xHoursAgoRegex)) {
-    const hoursAgo = Number(dateString.match(xHoursAgoRegex)![1]);
+    const hoursAgo = dateString.match(xHoursAgoRegex)[1];
     let now = new Date(new Date().valueOf() - hoursAgo * MS_PER_HOUR);
     return now;
   } else if (dateString === "one hour ago") {
@@ -219,26 +225,12 @@ const parseDateAndTime = (dateAndTimeString: string) => {
 
   let [hour, minute] = timeString.split(":");
 
-  return new Date(
-    Number(year),
-    Number(month) - 1,
-    Number(day),
-    Number(hour),
-    Number(minute)
-  );
+  return new Date(year, month - 1, day, hour, minute);
 };
 
-type Player = {
-  rank: string;
-  name: string;
-  username: string;
-  score: string;
-  win: boolean;
-};
-
-const parsePlayers = (playersCell: any) => {
+const parsePlayers = (playersCell) => {
   let playerCells = playersCell.querySelectorAll("div .simple-score-entry");
-  let players: Player[] = [];
+  let players = [];
   [...playerCells].forEach((playerCell, i) => {
     let player = {
       rank: playerCell.querySelector("div .rank").textContent,
@@ -256,7 +248,7 @@ const parsePlayers = (playersCell: any) => {
   return players;
 };
 
-const getGeekUsername = (arenaPlayerName: string) => {
+const getGeekUsername = (arenaPlayerName) => {
   // TODO: Lookup BGG usernames
   if (arenaPlayerName === "jcpmcdonald") {
     return "jcpmcdonald";
@@ -264,7 +256,7 @@ const getGeekUsername = (arenaPlayerName: string) => {
   return "";
 };
 
-const isIncomplete = (completedStatus: any) => {
+const isIncomplete = (completedStatus) => {
   if (
     completedStatus.querySelector("div.smalltext span.smalltext")
       ?.textContent === "(Game abandoned)"
@@ -275,17 +267,17 @@ const isIncomplete = (completedStatus: any) => {
 };
 
 const showBggAliasOnProfile = () => {
-  let playerHeader = document.querySelector("#player_header")!;
+  let playerHeader = document.querySelector("#player_header");
 
   const arenaName = playerHeader
-    .querySelector("#player_name")!
-    .textContent!.trimEnd();
+    .querySelector("#player_name")
+    .textContent.trimEnd();
   log(arenaName);
 
   const input = document.createElement("input");
   input.value = getGeekAliasForArenaPlayer(arenaName);
-  input.addEventListener("keyup", (e: any) => {
-    setGeekAliasForArenaPlayer(arenaName, e.target?.value);
+  input.addEventListener("keyup", (e) => {
+    setGeekAliasForArenaPlayer(arenaName, e.target.value);
   });
 
   const label = document.createElement("strong");
@@ -297,29 +289,26 @@ const showBggAliasOnProfile = () => {
   playerHeader.appendChild(cell);
 };
 
-const getGeekAliasForArenaPlayer = (arenaPlayerName: string) => {
+const getGeekAliasForArenaPlayer = (arenaPlayerName) => {
   if (arenaToGeekPlayerNames[arenaPlayerName]) {
     return arenaToGeekPlayerNames[arenaPlayerName];
   }
   return arenaPlayerName;
 };
 
-const setGeekAliasForArenaPlayer = (
-  arenaPlayerName: string,
-  geekAlias: string
-) => {
+const setGeekAliasForArenaPlayer = (arenaPlayerName, geekAlias) => {
   arenaToGeekPlayerNames[arenaPlayerName] = geekAlias.trim();
   log(arenaToGeekPlayerNames);
   GM_setValue("arenaToGeekPlayerNames", JSON.stringify(arenaToGeekPlayerNames));
 };
 
 const showBggIdOnGamePanel = () => {
-  let gameNameElement = document.querySelector("#game_name")!;
-  let gameName = gameNameElement.textContent!.trimEnd();
+  let gameNameElement = document.querySelector("#game_name");
+  let gameName = gameNameElement.textContent.trimEnd();
 
   const input = document.createElement("input");
   input.value = getBggIdForGame(gameName);
-  input.addEventListener("keyup", (e: any) => {
+  input.addEventListener("keyup", (e) => {
     setBggIdForGame(gameName, e.target.value);
   });
 
@@ -329,18 +318,18 @@ const showBggIdOnGamePanel = () => {
   const cell = document.createElement("div");
   cell.appendChild(label);
   cell.appendChild(input);
-  gameNameElement.parentElement!.appendChild(cell);
+  gameNameElement.parentElement.appendChild(cell);
 };
 
 const showBggIdOnTableSummary = () => {
-  let gameNameElement = document.querySelector("#table_name")!;
-  let gameName = gameNameElement.textContent!.trimEnd();
+  let gameNameElement = document.querySelector("#table_name");
+  let gameName = gameNameElement.textContent.trimEnd();
 
   log(gameName);
 
   const input = document.createElement("input");
   input.value = getBggIdForGame(gameName);
-  input.addEventListener("keyup", (e: any) => {
+  input.addEventListener("keyup", (e) => {
     setBggIdForGame(gameName, e.target.value);
   });
 
@@ -353,37 +342,37 @@ const showBggIdOnTableSummary = () => {
   gameNameElement.appendChild(cell);
 };
 
-const getBggIdForGame = (arenaGameName: string) => {
+const getBggIdForGame = (arenaGameName) => {
   if (arenaGameNameToBggId[arenaGameName]) {
     return arenaGameNameToBggId[arenaGameName];
   }
   return "";
 };
 
-const setBggIdForGame = (arenaGameName: string, bggId: string) => {
+const setBggIdForGame = (arenaGameName, bggId) => {
   arenaGameNameToBggId[arenaGameName] = bggId.trim();
   GM_setValue("arenaGameNameToBggId", JSON.stringify(arenaGameNameToBggId));
 };
 
-const isTableAlreadyRecorded = (tableNumber: string) => {
+const isTableAlreadyRecorded = (tableNumber) => {
   tableNumber = tableNumber.replace(/^#/, "");
   return alreadyRecordedTables[tableNumber];
 };
 
-const setTableAsRecorded = (tableNumber: string, bggPlaysLink: string) => {
+const setTableAsRecorded = (tableNumber, bggPlaysLink) => {
   tableNumber = tableNumber.replace(/^#/, "");
   alreadyRecordedTables[tableNumber] = bggPlaysLink;
   GM_setValue("alreadyRecordedTables", JSON.stringify(alreadyRecordedTables));
 };
 
 // To clear out a specific play, clear it with this:
-const forgetTableAsRecorded = (tableNumber: string) => {
+const forgetTableAsRecorded = (tableNumber) => {
   tableNumber = tableNumber.replace(/^#/, "");
-  delete alreadyRecordedTables[tableNumber];
+  alreadyRecordedTables[tableNumber] = undefined;
   GM_setValue("alreadyRecordedTables", JSON.stringify(alreadyRecordedTables));
 };
 
-async function main() {
+(async function () {
   "use strict";
 
   arenaToGeekPlayerNames = JSON.parse(
@@ -401,7 +390,7 @@ async function main() {
     GM_addStyle("#gamestats-module .simple-score-entry { width: 280px }");
 
     // Wait for the gamelist table to show the next page of game records
-    let pageNumber = 0;
+    var pageNumber = 0;
     while (true) {
       if (pageNumber === 0) {
         await waitForElementToDisplay("#gamelist tr", 1000);
@@ -422,6 +411,4 @@ async function main() {
   } else if (location.startsWith("https://boardgamearena.com/table")) {
     showBggIdOnTableSummary();
   }
-}
-
-main();
+})();

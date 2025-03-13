@@ -1,7 +1,7 @@
 {
-  "name": "userscript-typescript-template",
-  "version": "2.0.2",
-  "description": "Template repo using Webpack and TypeScript to build your userscript for Tampermonkey and more extensions.",
+  "name": "Arena-to-Geek",
+  "version": "1",
+  "description": "A userscript to copy BoardGameArena plays to BoardGameGeek",
   "main": "userscript/index.user.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -11,15 +11,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pboymt/userscript-typescript-template.git"
+    "url": "git+https://github.com/jcpmcdonald/Arena-to-Geek.git"
   },
   "keywords": [],
-  "author": "pboymt",
+  "author": "jcpmcdonald",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pboymt/userscript-typescript-template/issues"
+    "url": "https://github.com/jcpmcdonald/Arena-to-Geek/issues"
   },
-  "homepage": "https://github.com/pboymt/userscript-typescript-template#readme",
+  "homepage": "https://revenge.jcpmcdonald.com",
   "devDependencies": {
     "@types/node": "^18.15.11",
     "@types/prettier": "^2.7.0",
@@ -39,15 +39,14 @@
     "namespace": "http://tampermonkey.net/",
     "license": "https://opensource.org/licenses/MIT",
     "match": [
-      "https://github.com/*",
-      "https://www.baidu.com/*"
-    ],
-    "connect": [
-      "github.com"
+      "https://boardgamearena.com/gamestats?player=*"
     ],
     "require": [],
     "grant": [
-      "GM.xmlHttpRequest"
+      "GM.xmlHttpRequest",
+      "GM.setValue",
+      "GM.getValue",
+      "GM.addStyle"
     ],
     "exclude": [],
     "resources": [],
