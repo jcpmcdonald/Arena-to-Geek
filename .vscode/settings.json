@@ -1,7 +1,4 @@
 {
-    "conventionalCommits.scopes": [
-        "headers",
-        "webpack",
-        "npm"
-    ]
+  "conventionalCommits.scopes": ["headers", "webpack", "npm"],
+  "cSpell.flagWords": ["console"]
 }

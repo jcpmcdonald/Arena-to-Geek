@@ -1,7 +1,10 @@
-import { arenaGameNameToBggId, setBggIdForGame, actuallyRecord, log } from ".";
+import { start } from "node:repl";
+import { arenaGameNameToBggId, setBggIdForGame, actuallyRecord } from ".";
 import { Player } from "./types";
+import { log } from "./util";
 
 export const getBGGId = async (gameName: string): Promise<string> => {
+  // TODO: Replace this by looking up the BGG ID in the BGA game list
   if (arenaGameNameToBggId[gameName] && arenaGameNameToBggId[gameName] !== "") {
     return arenaGameNameToBggId[gameName];
   }
@@ -75,7 +78,7 @@ export const recordBGGPlay = async (play: Play) => {
   };
 
   if (!actuallyRecord) {
-    console.log("Not actually recording play", playData);
+    log("Not actually recording play", playData);
     // btnCell.innerHTML = "Not actually<br/>Recorded";
     return;
   }
@@ -98,4 +101,44 @@ export const recordBGGPlay = async (play: Play) => {
   );
 
   return correctedLinkToBGG;
+};
+
+export const getBGGPlays = async (start: Date, end: Date) => {
+  // Plays
+  // Request plays logged by a particular user or for a particular item.
+  // Base URI: /xmlapi2/plays?parameters
+  // Parameter	Description
+  // username=NAME	Name of the player you want to request play information for. Data is returned in backwards-chronological form. You must include either a username or an id and type to get results.
+  // id=NNN	Id number of the item you want to request play information for. Data is returned in backwards-chronological form.
+  // type=TYPE	Type of the item you want to request play information for. Valid types include:
+  //    thing
+  //    family
+  // mindate=YYYY-MM-DD	Returns only plays of the specified date or later.
+  // maxdate=YYYY-MM-DD	Returns only plays of the specified date or earlier.
+  // subtype=TYPE	Limits play results to the specified TYPE; boardgame is the default. Valid types include:
+  //    boardgame
+  //    boardgameexpansion
+  //    boardgameaccessory
+  //    boardgameintegration
+  //    boardgamecompilation
+  //    boardgameimplementation
+  //    rpg
+  //    rpgitem
+  //    videogame
+  // page=NNN	The page of information to request. Page size is 100 records.
+
+  await GM.xmlHttpRequest({
+    method: "GET",
+    url: `https://boardgamegeek.com/xmlapi2/plays?username=jcpmcdonald&type=thing&mindate=${
+      start.toISOString().split("T")[0]
+    }&maxdate=${end.toISOString().split("T")[0]}`,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    onload: function (response) {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(response.responseText, "text/xml");
+      log(xmlDoc);
+    },
+  });
 };

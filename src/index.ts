@@ -1,4 +1,6 @@
+import { log, waitForElementToDisplay } from "./util";
 import { displayCopyPlayButtons } from "./pages/gamesHistoryPage";
+import { showBggAliasOnProfile } from "./pages/playerPage";
 
 // Memory
 export const arenaToGeekPlayerNames: { [key: string]: string } = JSON.parse(
@@ -14,48 +16,6 @@ export const arenaGameNameToBggId: { [key: string]: string } = JSON.parse(
 export const DEBUG = true;
 export const actuallyRecord = true;
 
-export const log = (...data: any[]) => {
-  if (DEBUG) {
-    console.log(...data);
-  }
-};
-
-const sleep = (ms: number) => {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-};
-
-const waitForElementToDisplay = async (selector: string, time: number) => {
-  let element = document.querySelector(selector);
-  while (element === null) {
-    await sleep(time);
-    element = document.querySelector(selector);
-  }
-  return Promise.resolve();
-};
-
-const showBggAliasOnProfile = () => {
-  let playerHeader = document.querySelector("#player_header")!;
-
-  const arenaName = playerHeader
-    .querySelector("#player_name")!
-    .textContent!.trimEnd();
-  log(arenaName);
-
-  const input = document.createElement("input");
-  input.value = getGeekAliasForArenaPlayer(arenaName);
-  input.addEventListener("keyup", (e: any) => {
-    setGeekAliasForArenaPlayer(arenaName, e.target?.value);
-  });
-
-  const label = document.createElement("strong");
-  label.textContent = "BGG Alias: ";
-
-  const cell = document.createElement("div");
-  cell.appendChild(label);
-  cell.appendChild(input);
-  playerHeader.appendChild(cell);
-};
-
 export const getGeekAliasForArenaPlayer = (arenaPlayerName: string) => {
   if (arenaToGeekPlayerNames[arenaPlayerName]) {
     return arenaToGeekPlayerNames[arenaPlayerName];
@@ -63,7 +23,7 @@ export const getGeekAliasForArenaPlayer = (arenaPlayerName: string) => {
   return arenaPlayerName;
 };
 
-const setGeekAliasForArenaPlayer = (
+export const setGeekAliasForArenaPlayer = (
   arenaPlayerName: string,
   geekAlias: string
 ) => {
@@ -145,6 +105,35 @@ const forgetTableAsRecorded = (tableNumber: string) => {
   GM_setValue("alreadyRecordedTables", JSON.stringify(alreadyRecordedTables));
 };
 
+async function locationChanged(location: string) {
+  // const location = window.location.href;
+  if (location.startsWith("https://boardgamearena.com/gamestats")) {
+    GM_addStyle("#gamestats-module .simple-score-entry { width: 280px }");
+
+    // Wait for the gamelist table to show the next page of game records
+    let pageNumber = 0;
+    while (true) {
+      if (pageNumber === 0) {
+        await waitForElementToDisplay("#gamelist tr", 1000);
+      } else {
+        await waitForElementToDisplay(
+          `#gamelist tr:nth-child(${10 * pageNumber + 1})`,
+          1000
+        );
+      }
+      await displayCopyPlayButtons();
+
+      pageNumber++;
+    }
+  } else if (location.startsWith("https://boardgamearena.com/player")) {
+    showBggAliasOnProfile();
+  } else if (location.startsWith("https://boardgamearena.com/gamepanel")) {
+    showBggIdOnGamePanel();
+  } else if (location.startsWith("https://boardgamearena.com/table")) {
+    showBggIdOnTableSummary();
+  }
+}
+
 async function main() {
   "use strict";
 
@@ -173,7 +162,8 @@ async function main() {
   })();
 
   window.addEventListener("locationchange", function () {
-    console.log("location changed!");
+    log("location changed!", window.location.href);
+    locationChanged(window.location.href);
   });
 
   // Only works in chrome
@@ -181,32 +171,8 @@ async function main() {
   //   console.log("location changed!");
   // });
 
-  const location = window.location.href;
-  if (location.startsWith("https://boardgamearena.com/gamestats")) {
-    GM_addStyle("#gamestats-module .simple-score-entry { width: 280px }");
-
-    // Wait for the gamelist table to show the next page of game records
-    let pageNumber = 0;
-    while (true) {
-      if (pageNumber === 0) {
-        await waitForElementToDisplay("#gamelist tr", 1000);
-      } else {
-        await waitForElementToDisplay(
-          `#gamelist tr:nth-child(${10 * pageNumber + 1})`,
-          1000
-        );
-      }
-      await displayCopyPlayButtons();
-
-      pageNumber++;
-    }
-  } else if (location.startsWith("https://boardgamearena.com/player")) {
-    showBggAliasOnProfile();
-  } else if (location.startsWith("https://boardgamearena.com/gamepanel")) {
-    showBggIdOnGamePanel();
-  } else if (location.startsWith("https://boardgamearena.com/table")) {
-    showBggIdOnTableSummary();
-  }
+  // Initial run
+  locationChanged(window.location.href);
 }
 
 main();

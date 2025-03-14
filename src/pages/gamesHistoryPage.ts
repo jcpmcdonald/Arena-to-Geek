@@ -3,39 +3,13 @@ import {
   isTableAlreadyRecorded,
   setTableAsRecorded,
 } from "..";
-import { getBGGId, recordBGGPlay } from "../bgg";
+import { getBGGId, getBGGPlays, recordBGGPlay } from "../bgg";
 import { parseDateAndTime } from "../parseBGADate";
 import { Player } from "../types";
 
-export const parsePlayers = (playersCell: any) => {
-  const playerCells = playersCell.querySelectorAll("div .simple-score-entry");
-  const players: Player[] = [];
-  [...playerCells].forEach((playerCell, i) => {
-    const player = {
-      rank: playerCell.querySelector("div .rank").textContent,
-      name: getGeekAliasForArenaPlayer(
-        playerCell.querySelector("div a").textContent
-      ),
-      username: getGeekUsername(playerCell.querySelector("div a").textContent),
-      score: playerCell.querySelector("div .score").textContent,
-      win: false,
-    };
-    player.win = player.rank === "1st";
-    players.push(player);
-  });
-
-  return players;
-};
-
-const getGeekUsername = (arenaPlayerName: string) => {
-  // TODO: Lookup BGG usernames
-  if (arenaPlayerName === "jcpmcdonald") {
-    return "jcpmcdonald";
-  }
-  return "";
-};
-
 export const displayCopyPlayButtons = async () => {
+  // await getBGGPlays(new Date("2025-03-11"), new Date("2025-03-11"));
+
   [...document.querySelectorAll("#gamelist_inner tr")].forEach((row, i) => {
     if (!row.getAttribute("bga2bgg")) {
       // Show the BGG alias in-line
@@ -72,6 +46,34 @@ export const displayCopyPlayButtons = async () => {
       row.setAttribute("bga2bgg", "true");
     }
   });
+};
+
+export const parsePlayers = (playersCell: any) => {
+  const playerCells = playersCell.querySelectorAll("div .simple-score-entry");
+  const players: Player[] = [];
+  [...playerCells].forEach((playerCell, i) => {
+    const player = {
+      rank: playerCell.querySelector("div .rank").textContent,
+      name: getGeekAliasForArenaPlayer(
+        playerCell.querySelector("div a").textContent
+      ),
+      username: getGeekUsername(playerCell.querySelector("div a").textContent),
+      score: playerCell.querySelector("div .score").textContent,
+      win: false,
+    };
+    player.win = player.rank === "1st";
+    players.push(player);
+  });
+
+  return players;
+};
+
+const getGeekUsername = (arenaPlayerName: string) => {
+  // TODO: Lookup BGG usernames
+  if (arenaPlayerName === "jcpmcdonald") {
+    return "jcpmcdonald";
+  }
+  return "";
 };
 
 const recordPlay = async (e: any) => {
