@@ -9,12 +9,12 @@ export const arenaToGeekPlayerNames: { [key: string]: string } = JSON.parse(
 export const alreadyRecordedTables: { [key: string]: string } = JSON.parse(
   GM_getValue("alreadyRecordedTables", "{}")
 );
-export const arenaGameNameToBggId: { [key: string]: string } = JSON.parse(
-  GM_getValue("arenaGameNameToBggId", "{}")
-);
+// export const arenaGameNameToBggId: { [key: string]: string } = JSON.parse(
+//   GM_getValue("arenaGameNameToBggId", "{}")
+// );
 
 export const DEBUG = true;
-export const actuallyRecord = true;
+export const shouldActuallyRecord = false;
 
 export const getGeekAliasForArenaPlayer = (arenaPlayerName: string) => {
   if (arenaToGeekPlayerNames[arenaPlayerName]) {
@@ -32,57 +32,10 @@ export const setGeekAliasForArenaPlayer = (
   GM_setValue("arenaToGeekPlayerNames", JSON.stringify(arenaToGeekPlayerNames));
 };
 
-const showBggIdOnGamePanel = () => {
-  let gameNameElement = document.querySelector("#game_name")!;
-  let gameName = gameNameElement.textContent!.trimEnd();
-
-  const input = document.createElement("input");
-  input.value = getBggIdForGame(gameName);
-  input.addEventListener("keyup", (e: any) => {
-    setBggIdForGame(gameName, e.target.value);
-  });
-
-  const label = document.createElement("strong");
-  label.textContent = "BGG ID: ";
-
-  const cell = document.createElement("div");
-  cell.appendChild(label);
-  cell.appendChild(input);
-  gameNameElement.parentElement!.appendChild(cell);
-};
-
-const showBggIdOnTableSummary = () => {
-  let gameNameElement = document.querySelector("#table_name")!;
-  let gameName = gameNameElement.textContent!.trimEnd();
-
-  log(gameName);
-
-  const input = document.createElement("input");
-  input.value = getBggIdForGame(gameName);
-  input.addEventListener("keyup", (e: any) => {
-    setBggIdForGame(gameName, e.target.value);
-  });
-
-  const label = document.createElement("strong");
-  label.textContent = "BGG ID: ";
-
-  const cell = document.createElement("div");
-  cell.appendChild(label);
-  cell.appendChild(input);
-  gameNameElement.appendChild(cell);
-};
-
-const getBggIdForGame = (arenaGameName: string) => {
-  if (arenaGameNameToBggId[arenaGameName]) {
-    return arenaGameNameToBggId[arenaGameName];
-  }
-  return "";
-};
-
-export const setBggIdForGame = (arenaGameName: string, bggId: string) => {
-  arenaGameNameToBggId[arenaGameName] = bggId.trim();
-  GM_setValue("arenaGameNameToBggId", JSON.stringify(arenaGameNameToBggId));
-};
+// export const setBggIdForGame = (arenaGameName: string, bggId: string) => {
+//   arenaGameNameToBggId[arenaGameName] = bggId.trim();
+//   GM_setValue("arenaGameNameToBggId", JSON.stringify(arenaGameNameToBggId));
+// };
 
 export const isTableAlreadyRecorded = (tableNumber: string) => {
   tableNumber = tableNumber.replace(/^#/, "");
@@ -127,10 +80,6 @@ async function locationChanged(location: string) {
     }
   } else if (location.startsWith("https://boardgamearena.com/player")) {
     showBggAliasOnProfile();
-  } else if (location.startsWith("https://boardgamearena.com/gamepanel")) {
-    showBggIdOnGamePanel();
-  } else if (location.startsWith("https://boardgamearena.com/table")) {
-    showBggIdOnTableSummary();
   }
 }
 
