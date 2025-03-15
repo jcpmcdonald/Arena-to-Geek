@@ -3,27 +3,31 @@ import { getBGGId } from "../bga";
 import { recordBGGPlay } from "../bgg";
 import { parseDateAndTime } from "../parseBGADate";
 import { Player } from "../types";
-import { waitForElementToDisplay } from "../util";
+import { log, waitForElementToDisplay } from "../util";
 import { getGeekAliasForArenaPlayer } from "./playerPage";
 
 export const attachToGamesHistoryPage = async () => {
   GM_addStyle("#gamestats-module .simple-score-entry { width: 280px }");
 
-  // Wait for the gamelist table to show the next page of game records
-  let pageNumber = 0;
-  while (true) {
-    if (pageNumber === 0) {
-      await waitForElementToDisplay("#gamelist tr", 1000);
-    } else {
-      await waitForElementToDisplay(
-        `#gamelist tr:nth-child(${10 * pageNumber + 1})`,
-        1000
-      );
-    }
-    await displayCopyPlayButtons();
+  const gameListRow = "#gamelist tr";
+  await waitForElementToDisplay(gameListRow, 100);
+  await waitForElementToDisplay("#see_more_tables", 100);
 
-    pageNumber++;
-  }
+  document
+    .querySelector("#see_more_tables")!
+    .addEventListener("click", async () => {
+      const currentItemCount = document.querySelectorAll(gameListRow).length;
+      await waitForElementToDisplay(
+        `${gameListRow}:nth-child(${currentItemCount + 1})`,
+        100
+      );
+
+      // Render the buttons for the new page
+      await displayCopyPlayButtons();
+    });
+
+  // Render the buttons for the first page
+  await displayCopyPlayButtons();
 };
 
 const displayCopyPlayButtons = async () => {

@@ -15,6 +15,7 @@ export const alreadyRecordedTables: { [key: string]: string } = JSON.parse(
 
 export const DEBUG = true;
 export const shouldActuallyRecord = false;
+const BGG_USERNAME = "jcpmcdonald";
 
 // export const setBggIdForGame = (arenaGameName: string, bggId: string) => {
 //   arenaGameNameToBggId[arenaGameName] = bggId.trim();
@@ -65,7 +66,7 @@ async function main() {
   })();
 
   window.addEventListener("locationchange", function () {
-    log("location changed!", window.location.href);
+    // log("location changed!", window.location.href);
     locationChanged(window.location.href);
   });
 

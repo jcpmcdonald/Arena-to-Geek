@@ -56,32 +56,23 @@ export const recordBGGPlay = async (play: Play) => {
   return correctedLinkToBGG;
 };
 
-export const getBGGPlays = async (start: Date, end: Date) => {
-  // Plays
+/**
+ * Get plays from BGG for a particular user between two dates
+ * @param start The year, month, and day to start the search (hour, minute, and second are ignored)
+ * @param end The year, month, and day to end the search (hour, minute, and second are ignored)
+ */
+export const getBGGPlays = async (username: string, start: Date, end: Date) => {
   // Request plays logged by a particular user or for a particular item.
-  // Base URI: /xmlapi2/plays?parameters
-  // Parameter	Description
   // username=NAME	Name of the player you want to request play information for. Data is returned in backwards-chronological form. You must include either a username or an id and type to get results.
   // id=NNN	Id number of the item you want to request play information for. Data is returned in backwards-chronological form.
-  // type=TYPE	Type of the item you want to request play information for. Valid types include:
-  //    thing
-  //    family
+  // type=TYPE	Type of the item you want to request play information for. Valid types include: thing, family
   // mindate=YYYY-MM-DD	Returns only plays of the specified date or later.
   // maxdate=YYYY-MM-DD	Returns only plays of the specified date or earlier.
-  // subtype=TYPE	Limits play results to the specified TYPE; boardgame is the default. Valid types include:
-  //    boardgame
-  //    boardgameexpansion
-  //    boardgameaccessory
-  //    boardgameintegration
-  //    boardgamecompilation
-  //    boardgameimplementation
-  //    rpg
-  //    rpgitem
-  //    videogame
+  // subtype=TYPE	Limits play results to the specified TYPE; boardgame is the default. Valid types include: boardgame, boardgameexpansion, boardgameaccessory, boardgameintegration, boardgamecompilation, boardgameimplementation, rpg, rpgitem, videogame
   // page=NNN	The page of information to request. Page size is 100 records.
 
   const queryParams = new URLSearchParams({
-    username: "jcpmcdonald",
+    username: username,
     type: "thing",
     mindate: start.toISOString().split("T")[0],
     maxdate: end.toISOString().split("T")[0],
