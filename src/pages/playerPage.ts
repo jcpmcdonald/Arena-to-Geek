@@ -1,7 +1,11 @@
-import { getGeekAliasForArenaPlayer, setGeekAliasForArenaPlayer } from "..";
+import { arenaToGeekPlayerNames } from "..";
 import { log } from "../util";
 
-export const showBggAliasOnProfile = () => {
+export const attachToPlayerPage = async () => {
+  showBggAliasOnProfile();
+};
+
+const showBggAliasOnProfile = () => {
   log("showBggAliasOnProfile");
   let playerHeader = document.querySelector("#player_header")!;
 
@@ -24,4 +28,20 @@ export const showBggAliasOnProfile = () => {
   cell.appendChild(label);
   cell.appendChild(input);
   playerHeader.appendChild(cell);
+};
+
+const setGeekAliasForArenaPlayer = (
+  arenaPlayerName: string,
+  geekAlias: string
+) => {
+  arenaToGeekPlayerNames[arenaPlayerName] = geekAlias.trim();
+  log(arenaToGeekPlayerNames);
+  GM_setValue("arenaToGeekPlayerNames", JSON.stringify(arenaToGeekPlayerNames));
+};
+
+export const getGeekAliasForArenaPlayer = (arenaPlayerName: string) => {
+  if (arenaToGeekPlayerNames[arenaPlayerName]) {
+    return arenaToGeekPlayerNames[arenaPlayerName];
+  }
+  return arenaPlayerName;
 };

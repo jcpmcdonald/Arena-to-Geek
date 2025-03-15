@@ -1,13 +1,32 @@
-import {
-  getGeekAliasForArenaPlayer,
-  isTableAlreadyRecorded,
-  setTableAsRecorded,
-} from "..";
-import { getBGGId, getBGGPlays, recordBGGPlay } from "../bgg";
+import { alreadyRecordedTables } from "..";
+import { getBGGId } from "../bga";
+import { recordBGGPlay } from "../bgg";
 import { parseDateAndTime } from "../parseBGADate";
 import { Player } from "../types";
+import { waitForElementToDisplay } from "../util";
+import { getGeekAliasForArenaPlayer } from "./playerPage";
 
-export const displayCopyPlayButtons = async () => {
+export const attachToGamesHistoryPage = async () => {
+  GM_addStyle("#gamestats-module .simple-score-entry { width: 280px }");
+
+  // Wait for the gamelist table to show the next page of game records
+  let pageNumber = 0;
+  while (true) {
+    if (pageNumber === 0) {
+      await waitForElementToDisplay("#gamelist tr", 1000);
+    } else {
+      await waitForElementToDisplay(
+        `#gamelist tr:nth-child(${10 * pageNumber + 1})`,
+        1000
+      );
+    }
+    await displayCopyPlayButtons();
+
+    pageNumber++;
+  }
+};
+
+const displayCopyPlayButtons = async () => {
   // await getBGGPlays(new Date("2025-03-11"), new Date("2025-03-11"));
 
   [...document.querySelectorAll("#gamelist_inner tr")].forEach((row, i) => {
@@ -28,10 +47,12 @@ export const displayCopyPlayButtons = async () => {
 
       const bggLink = isTableAlreadyRecorded(tableId);
       if (bggLink) {
+        // Already recorded
         const cell = document.createElement("td");
         cell.innerHTML = bggLink;
         row.appendChild(cell);
       } else {
+        // Add the button to record the play
         const input = document.createElement("button");
         input.textContent = "Record Play";
         input.style.backgroundColor = "grey";
@@ -48,7 +69,7 @@ export const displayCopyPlayButtons = async () => {
   });
 };
 
-export const parsePlayers = (playersCell: any) => {
+const parsePlayers = (playersCell: any) => {
   const playerCells = playersCell.querySelectorAll("div .simple-score-entry");
   const players: Player[] = [];
   [...playerCells].forEach((playerCell, i) => {
@@ -112,4 +133,15 @@ const isIncomplete = (completedStatus: any) => {
     return true;
   }
   return false;
+};
+
+const isTableAlreadyRecorded = (tableNumber: string) => {
+  tableNumber = tableNumber.replace(/^#/, "");
+  return alreadyRecordedTables[tableNumber];
+};
+
+const setTableAsRecorded = (tableNumber: string, bggPlaysLink: string) => {
+  tableNumber = tableNumber.replace(/^#/, "");
+  alreadyRecordedTables[tableNumber] = bggPlaysLink;
+  GM_setValue("alreadyRecordedTables", JSON.stringify(alreadyRecordedTables));
 };
