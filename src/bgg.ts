@@ -11,7 +11,7 @@ type Play = {
   comments: string;
 };
 
-export const recordBGGPlay = async (play: Play) => {
+export const recordBGGPlay = async (play: Play): Promise<string | null> => {
   const playDate = `${play.date.getFullYear()}-${String(
     play.date.getMonth() + 1
   ).padStart(2, "0")}-${String(play.date.getDate()).padStart(2, "0")}`;
@@ -33,11 +33,11 @@ export const recordBGGPlay = async (play: Play) => {
   if (!shouldActuallyRecord) {
     log("Not actually recording play", playData);
     // btnCell.innerHTML = "Not actually<br/>Recorded";
-    return;
+    return null;
   }
 
   log("Recording play:", playData);
-  const response = await GM.xmlHttpRequest({
+  const response = await GM.xmlHttpRequest<{ arst: string }>({
     method: "POST",
     url: "https://boardgamegeek.com/geekplay.php",
     headers: {
