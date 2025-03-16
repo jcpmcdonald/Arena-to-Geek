@@ -84,10 +84,16 @@ const showBggAliasInLine = (row: Element) => {
   for (const cell of playerNameCell) {
     const arenaName = cell.querySelector("a")!.textContent!;
     const geekAlias = getGeekAliasForArenaPlayer(arenaName);
-    if (geekAlias !== arenaName) {
+    if (geekAlias) {
+      // if (geekAlias !== arenaName) {
       const aliasDiv = document.createElement("span");
       aliasDiv.textContent = ` (${geekAlias})`;
       cell.appendChild(aliasDiv);
+      // } else {
+      //   const aliasDiv = document.createElement("span");
+      //   aliasDiv.textContent = ` (*)`;
+      //   cell.appendChild(aliasDiv);
+      // }
     }
   }
 };

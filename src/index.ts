@@ -30,11 +30,10 @@ const BGG_USERNAME = "jcpmcdonald";
 // };
 
 async function locationChanged(location: string) {
-  // const location = window.location.href;
   if (location.startsWith("https://boardgamearena.com/gamestats")) {
-    attachToGamesHistoryPage();
+    await attachToGamesHistoryPage();
   } else if (location.startsWith("https://boardgamearena.com/player")) {
-    attachToPlayerPage();
+    await attachToPlayerPage();
   }
 }
 
@@ -65,9 +64,9 @@ async function main() {
     });
   })();
 
-  window.addEventListener("locationchange", function () {
+  window.addEventListener("locationchange", async function () {
     // log("location changed!", window.location.href);
-    locationChanged(window.location.href);
+    await locationChanged(window.location.href);
   });
 
   // Only works in chrome
@@ -76,7 +75,7 @@ async function main() {
   // });
 
   // Initial run
-  locationChanged(window.location.href);
+  await locationChanged(window.location.href);
 }
 
 main();

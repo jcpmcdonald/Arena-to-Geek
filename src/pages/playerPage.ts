@@ -1,19 +1,17 @@
 import { arenaToGeekPlayerNames } from "..";
-import { log } from "../util";
+import { log, waitForElementToDisplay } from "../util";
 
 export const attachToPlayerPage = async () => {
+  await waitForElementToDisplay("#player_header", 100);
   showBggAliasOnProfile();
 };
 
 const showBggAliasOnProfile = () => {
-  log("showBggAliasOnProfile");
   let playerHeader = document.querySelector("#player_header")!;
 
-  log(playerHeader);
   const arenaName = playerHeader
     .querySelector("#player_name")!
     .textContent!.trimEnd();
-  log(arenaName);
 
   const input = document.createElement("input");
   input.value = getGeekAliasForArenaPlayer(arenaName);
@@ -43,5 +41,5 @@ export const getGeekAliasForArenaPlayer = (arenaPlayerName: string) => {
   if (arenaToGeekPlayerNames[arenaPlayerName]) {
     return arenaToGeekPlayerNames[arenaPlayerName];
   }
-  return arenaPlayerName;
+  return "";
 };
