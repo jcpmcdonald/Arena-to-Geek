@@ -1,6 +1,6 @@
 import { alreadyRecordedTables, shouldActuallyRecord } from "..";
 import { getBGGId } from "../bga";
-import { recordBGGPlay } from "../bgg";
+import { getBGGPlays, recordBGGPlay } from "../bgg";
 import { parseDateAndTime } from "../parseBGADate";
 import { Player } from "../types";
 import { log, waitForElementToDisplay } from "../util";
@@ -42,6 +42,11 @@ export const attachToGamesHistoryPage = async () => {
 
 const onGameListRowChange = async () => {
   // Look up plays for the last 10 games
+  const plays = await getBGGPlays(
+    "jcpmcdonald",
+    new Date("2025-03-05"),
+    new Date("2025-03-11")
+  );
 
   // Display the "Copy Play" buttons
   await displayCopyPlayButtons();
@@ -50,18 +55,22 @@ const onGameListRowChange = async () => {
 const displayCopyPlayButtons = async () => {
   // await getBGGPlays(new Date("2025-03-11"), new Date("2025-03-11"));
 
-  [...document.querySelectorAll("#gamelist_inner tr")].forEach((row, i) => {
+  const rows = document.querySelectorAll("#gamelist_inner tr");
+
+  for (const row of rows) {
+    // Skip rows that have already been processed
     if (!row.getAttribute("bga2bgg")) {
-      displayCopyPlayButton(row);
+      showBggAliasInLine(row);
+      await displayCopyPlayButton(row);
       row.setAttribute("bga2bgg", "true");
     }
-  });
+  }
 };
 
-const displayCopyPlayButton = async (row: Element) => {
+const showBggAliasInLine = (row: Element) => {
   // Show the BGG alias in-line
   const playerNameCell = row.querySelectorAll("td:nth-child(3) .name");
-  [...playerNameCell].forEach((cell, i) => {
+  for (const cell of playerNameCell) {
     const arenaName = cell.querySelector("a")!.textContent!;
     const geekAlias = getGeekAliasForArenaPlayer(arenaName);
     if (geekAlias !== arenaName) {
@@ -69,8 +78,10 @@ const displayCopyPlayButton = async (row: Element) => {
       aliasDiv.textContent = ` (${geekAlias})`;
       cell.appendChild(aliasDiv);
     }
-  });
+  }
+};
 
+const displayCopyPlayButton = async (row: Element) => {
   const table = await tableFromRow(row);
 
   const bggLink = isTableAlreadyRecorded(table.tableId);
@@ -122,7 +133,8 @@ const tableFromRow = async (row: Element): Promise<Table> => {
 const parsePlayers = (playersCell: Element) => {
   const playerCells = playersCell.querySelectorAll("div .simple-score-entry");
   const players: Player[] = [];
-  [...playerCells].forEach((playerCell, i) => {
+
+  for (const playerCell of playerCells) {
     const player = {
       rank: playerCell.querySelector("div .rank")!.textContent!,
       name: getGeekAliasForArenaPlayer(
@@ -135,8 +147,9 @@ const parsePlayers = (playersCell: Element) => {
       win: false,
     };
     player.win = player.rank === "1st";
+
     players.push(player);
-  });
+  }
 
   return players;
 };

@@ -25,7 +25,7 @@ export const recordBGGPlay = async (play: Play): Promise<string | null> => {
     objecttype: "thing",
     objectid: play.objectid, // The BGG ID of the game
     comments: play.comments,
-    location: "BoardGameArena",
+    location: "Board Game Arena",
     ajax: 1,
     action: "save",
   };
@@ -88,5 +88,64 @@ export const getBGGPlays = async (username: string, start: Date, end: Date) => {
 
   const parser = new DOMParser();
   const xmlDoc = parser.parseFromString(response.responseText, "text/xml");
-  log(xmlDoc);
+  // log(xmlDoc);
+
+  // <plays username="jcpmcdonald" userid="589830" total="1" page="1" termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+  //   <play id="96466596" date="2025-03-11" quantity="1" length="18" incomplete="0" nowinstats="0" location="BoardGameArena">
+  // 		<item name="Pixies" objecttype="thing" objectid="411875">
+  // 			<subtypes><subtype value="boardgame"/></subtypes>
+  // 		</item>
+  // 		<comments>https://boardgamearena.com/table?table=642468163</comments>
+  // 		<players>
+  // 		  <player username="jcpmcdonald" userid="589830" name="jcpmcdonald" startposition="" color="" score="125  " new="0" rating="0" win="1"/>
+  // 			<player username="" userid="0" name="madmuc" startposition="" color="" score="123  " new="0" rating="0" win="0"/>
+  // 			<player username="" userid="0" name="shlfung" startposition="" color="" score="115  " new="0" rating="0" win="0"/>
+  // 		</players>
+  // 	</play>
+  // </plays>
+
+  const plays: Play[] = [];
+  const playElements = xmlDoc.getElementsByTagName("play");
+  for (const play of playElements) {
+    // Skip plays whose location is not Board Game Arena
+    if (
+      play.getAttribute("location") !== "Board Game Arena" &&
+      play.getAttribute("location") !== "BoardGameArena" // Legacy support
+    ) {
+      continue;
+    }
+
+    const date = new Date(play.getAttribute("date")!);
+    const length = play.getAttribute("length")!;
+    const incomplete = play.getAttribute("incomplete") === "1";
+    const comments = play.getElementsByTagName("comments")[0].textContent!;
+    const objectid = play
+      .getElementsByTagName("item")[0]
+      .getAttribute("objectid")!;
+
+    const players = play.getElementsByTagName("player");
+    const playerList: Player[] = [];
+    for (const element of players) {
+      const player = element;
+      playerList.push({
+        name: player.getAttribute("name")!,
+        username: player.getAttribute("username")!,
+        score: player.getAttribute("score")!,
+        win: player.getAttribute("win") === "1",
+      });
+    }
+
+    const playData: Play = {
+      date,
+      length,
+      players: playerList,
+      incomplete,
+      objectid: parseInt(objectid),
+      comments,
+    };
+
+    plays.push(playData);
+  }
+
+  return plays;
 };
