@@ -1,9 +1,9 @@
-import { alreadyRecordedTables, shouldActuallyRecord } from "..";
+import { shouldActuallyRecord } from "..";
 import { getBGGId } from "../bga";
-import { getBGGPlays, recordBGGPlay } from "../bgg";
+import { getBGAPlaysFromBGG, Play, recordBGGPlay } from "../bgg";
 import { parseDateAndTime } from "../parseBGADate";
 import { Player } from "../types";
-import { log, waitForElementToDisplay } from "../util";
+import { waitForElementToDisplay } from "../util";
 import { getGeekAliasForArenaPlayer } from "./playerPage";
 
 export type Table = {
@@ -15,6 +15,14 @@ export type Table = {
   incomplete: boolean;
   bggId: number;
 };
+
+type TableRow = Table & {
+  row: Element;
+};
+
+// const alreadyRecordedTables: { [key: string]: string } = [];
+
+const bggPlays: Play[] = [];
 
 export const attachToGamesHistoryPage = async () => {
   GM_addStyle("#gamestats-module .simple-score-entry { width: 280px }");
@@ -41,29 +49,32 @@ export const attachToGamesHistoryPage = async () => {
 };
 
 const onGameListRowChange = async () => {
-  // Look up plays for the last 10 games
-  const plays = await getBGGPlays(
-    "jcpmcdonald",
-    new Date("2025-03-05"),
-    new Date("2025-03-11")
-  );
-
-  // Display the "Copy Play" buttons
-  await displayCopyPlayButtons();
-};
-
-const displayCopyPlayButtons = async () => {
-  // await getBGGPlays(new Date("2025-03-11"), new Date("2025-03-11"));
-
+  // Gather the table data
+  const newTableRows: TableRow[] = [];
   const rows = document.querySelectorAll("#gamelist_inner tr");
-
   for (const row of rows) {
     // Skip rows that have already been processed
     if (!row.getAttribute("bga2bgg")) {
-      showBggAliasInLine(row);
-      await displayCopyPlayButton(row);
-      row.setAttribute("bga2bgg", "true");
+      const table = await tableFromRow(row);
+      newTableRows.push({ ...table, row });
     }
+  }
+
+  // Look up plays for the recent page
+  const newBgaPlays = await getBGAPlaysFromBGG(
+    "jcpmcdonald",
+    newTableRows[newTableRows.length - 1].date,
+    newTableRows[0].date
+  );
+
+  // There will be some overlap between the new plays and the existing plays
+  bggPlays.push(...newBgaPlays);
+
+  for (const tableRow of newTableRows) {
+    showBggAliasInLine(tableRow.row);
+    const cell = await getCopyPlayCellForTable(tableRow);
+    tableRow.row.appendChild(cell);
+    tableRow.row.setAttribute("bga2bgg", "true");
   }
 };
 
@@ -81,14 +92,11 @@ const showBggAliasInLine = (row: Element) => {
   }
 };
 
-const displayCopyPlayButton = async (row: Element) => {
-  const table = await tableFromRow(row);
-
-  const bggLink = isTableAlreadyRecorded(table.tableId);
+const getCopyPlayCellForTable = async (table: Table) => {
   const cell = document.createElement("td");
-  if (bggLink) {
+  if (isTableAlreadyRecorded(table.tableId)) {
     // Already recorded
-    cell.innerHTML = bggLink;
+    cell.innerHTML = "Already Recorded";
   } else {
     // Add the button to record the play
     const input = document.createElement("button");
@@ -99,7 +107,8 @@ const displayCopyPlayButton = async (row: Element) => {
     input.onclick = () => recordPlay(table, cell);
     cell.appendChild(input);
   }
-  row.appendChild(cell);
+  // row.appendChild(cell);
+  return cell;
 };
 
 const getGeekUsername = (arenaPlayerName: string) => {
@@ -172,7 +181,8 @@ const recordPlay = async (table: Table, btnCell: Element) => {
   }
 
   btnCell.innerHTML = playLink;
-  setTableAsRecorded(table.tableId, playLink);
+  // TODO: add the play to the list of BGG plays
+  // setTableAsRecorded(table.tableId, playLink);
 };
 
 const isIncomplete = (completedStatus: Element) => {
@@ -186,11 +196,14 @@ const isIncomplete = (completedStatus: Element) => {
 };
 
 const isTableAlreadyRecorded = (tableNumber: number) => {
-  log("Checking if table is already recorded", tableNumber);
-  return alreadyRecordedTables[tableNumber];
+  // log("Checking if table is already recorded", tableNumber);
+  if (bggPlays.find((play) => play.comments.includes(`table=${tableNumber}`))) {
+    return true;
+  }
+  return false;
 };
 
-const setTableAsRecorded = (tableNumber: number, bggPlaysLink: string) => {
-  alreadyRecordedTables[tableNumber] = bggPlaysLink;
-  GM_setValue("alreadyRecordedTables", JSON.stringify(alreadyRecordedTables));
-};
+// const setTableAsRecorded = (tableNumber: number, bggPlaysLink: string) => {
+//   alreadyRecordedTables[tableNumber] = bggPlaysLink;
+//   // GM_setValue("alreadyRecordedTables", JSON.stringify(alreadyRecordedTables));
+// };

@@ -2,7 +2,7 @@ import { shouldActuallyRecord } from ".";
 import { Player } from "./types";
 import { log } from "./util";
 
-type Play = {
+export type Play = {
   date: Date;
   length: string;
   players: Player[];
@@ -47,6 +47,7 @@ export const recordBGGPlay = async (play: Play): Promise<string | null> => {
   });
 
   log(response.response);
+  // TODO: Just return the whole play
   const data = JSON.parse(response.response);
   let correctedLinkToBGG = data.html.replace(
     /\"\/plays/,
@@ -61,7 +62,11 @@ export const recordBGGPlay = async (play: Play): Promise<string | null> => {
  * @param start The year, month, and day to start the search (hour, minute, and second are ignored)
  * @param end The year, month, and day to end the search (hour, minute, and second are ignored)
  */
-export const getBGGPlays = async (username: string, start: Date, end: Date) => {
+export const getBGAPlaysFromBGG = async (
+  username: string,
+  start: Date,
+  end: Date
+) => {
   // Request plays logged by a particular user or for a particular item.
   // username=NAME	Name of the player you want to request play information for. Data is returned in backwards-chronological form. You must include either a username or an id and type to get results.
   // id=NNN	Id number of the item you want to request play information for. Data is returned in backwards-chronological form.
@@ -71,11 +76,17 @@ export const getBGGPlays = async (username: string, start: Date, end: Date) => {
   // subtype=TYPE	Limits play results to the specified TYPE; boardgame is the default. Valid types include: boardgame, boardgameexpansion, boardgameaccessory, boardgameintegration, boardgamecompilation, boardgameimplementation, rpg, rpgitem, videogame
   // page=NNN	The page of information to request. Page size is 100 records.
 
+  // Move the dates out a bit to allow for timezone crap
+  let minDate = new Date(start);
+  minDate.setDate(start.getDate() - 1);
+  const maxDate = new Date(end);
+  maxDate.setDate(end.getDate() + 1);
+
   const queryParams = new URLSearchParams({
     username: username,
     type: "thing",
-    mindate: start.toISOString().split("T")[0],
-    maxdate: end.toISOString().split("T")[0],
+    mindate: minDate.toISOString().split("T")[0],
+    maxdate: maxDate.toISOString().split("T")[0],
   });
 
   const response = await GM.xmlHttpRequest({

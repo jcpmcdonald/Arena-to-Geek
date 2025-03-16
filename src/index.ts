@@ -6,9 +6,9 @@ import { attachToPlayerPage } from "./pages/playerPage";
 export const arenaToGeekPlayerNames: { [key: string]: string } = JSON.parse(
   GM_getValue("arenaToGeekPlayerNames", "{}")
 );
-export const alreadyRecordedTables: { [key: string]: string } = JSON.parse(
-  GM_getValue("alreadyRecordedTables", "{}")
-);
+// export const alreadyRecordedTables: { [key: string]: string } = JSON.parse(
+//   GM_getValue("alreadyRecordedTables", "{}")
+// );
 // export const arenaGameNameToBggId: { [key: string]: string } = JSON.parse(
 //   GM_getValue("arenaGameNameToBggId", "{}")
 // );
@@ -23,11 +23,11 @@ const BGG_USERNAME = "jcpmcdonald";
 // };
 
 // To clear out a specific play, clear it with this:
-const forgetTableAsRecorded = (tableNumber: string) => {
-  tableNumber = tableNumber.replace(/^#/, "");
-  delete alreadyRecordedTables[tableNumber];
-  GM_setValue("alreadyRecordedTables", JSON.stringify(alreadyRecordedTables));
-};
+// const forgetTableAsRecorded = (tableNumber: string) => {
+//   tableNumber = tableNumber.replace(/^#/, "");
+//   delete alreadyRecordedTables[tableNumber];
+//   GM_setValue("alreadyRecordedTables", JSON.stringify(alreadyRecordedTables));
+// };
 
 async function locationChanged(location: string) {
   // const location = window.location.href;
