@@ -2,7 +2,7 @@ import { shouldActuallyRecord } from "..";
 import { getBGGId } from "../bga";
 import { getBGAPlaysFromBGG, Play, recordBGGPlay } from "../bgg";
 import { parseDateAndTime } from "../parseBGADate";
-import { Player } from "../types";
+import { ArenaPlayer } from "../types";
 import { waitForElementToDisplay } from "../util";
 import { getGeekAliasForArenaPlayer } from "./playerPage";
 
@@ -11,7 +11,7 @@ export type Table = {
   gameName: string;
   date: Date;
   length: string;
-  players: Player[];
+  players: ArenaPlayer[];
   incomplete: boolean;
   bggId: number;
 };
@@ -147,21 +147,17 @@ const tableFromRow = async (row: Element): Promise<Table> => {
 
 const parsePlayers = (playersCell: Element) => {
   const playerCells = playersCell.querySelectorAll("div .simple-score-entry");
-  const players: Player[] = [];
+  const players: ArenaPlayer[] = [];
 
   for (const playerCell of playerCells) {
-    const player = {
-      rank: playerCell.querySelector("div .rank")!.textContent!,
+    const rank = playerCell.querySelector("div .rank")!.textContent!.trim();
+    const player: ArenaPlayer = {
       name: getGeekAliasForArenaPlayer(
         playerCell.querySelector("div a")!.textContent!
       ),
-      username: getGeekUsername(
-        playerCell.querySelector("div a")!.textContent!
-      ),
       score: playerCell.querySelector("div .score")!.textContent!.trim(),
-      win: false,
+      win: rank === "1st",
     };
-    player.win = player.rank === "1st";
 
     players.push(player);
   }
@@ -172,10 +168,17 @@ const parsePlayers = (playersCell: Element) => {
 const recordPlay = async (table: Table, btnCell: Element) => {
   btnCell.innerHTML = "Recording...";
 
+  const geekPlayers = table.players.map((player) => ({
+    name: player.name,
+    username: getGeekUsername(player.name),
+    score: player.score,
+    win: player.win,
+  }));
+
   const playLink = await recordBGGPlay({
     date: table.date,
     length: table.length,
-    players: table.players,
+    players: geekPlayers,
     incomplete: table.incomplete,
     objectid: table.bggId,
     comments: `https://boardgamearena.com/table?table=${table.tableId}`,

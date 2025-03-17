@@ -1,11 +1,11 @@
 import { shouldActuallyRecord } from ".";
-import { Player } from "./types";
+import { GeekPlayer } from "./types";
 import { log } from "./util";
 
 export type Play = {
   date: Date;
   length: string;
-  players: Player[];
+  players: GeekPlayer[];
   incomplete: boolean;
   objectid: number;
   comments: string;
@@ -135,7 +135,7 @@ export const getBGAPlaysFromBGG = async (
       .getAttribute("objectid")!;
 
     const players = play.getElementsByTagName("player");
-    const playerList: Player[] = [];
+    const playerList: GeekPlayer[] = [];
     for (const element of players) {
       const player = element;
       playerList.push({

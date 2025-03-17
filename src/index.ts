@@ -1,6 +1,7 @@
 import { log } from "./util";
 import { attachToGamesHistoryPage } from "./pages/gamesHistoryPage";
 import { attachToPlayerPage } from "./pages/playerPage";
+import { attachToGameEndPage } from "./pages/tablePage";
 
 // Memory
 export const arenaToGeekPlayerNames: { [key: string]: string } = JSON.parse(
@@ -30,10 +31,16 @@ const BGG_USERNAME = "jcpmcdonald";
 // };
 
 async function locationChanged(location: string) {
+  log("location changed!", location);
   if (location.startsWith("https://boardgamearena.com/gamestats")) {
     await attachToGamesHistoryPage();
   } else if (location.startsWith("https://boardgamearena.com/player")) {
     await attachToPlayerPage();
+  } else if (
+    // https://boardgamearena.com/6/shutthebox?table=645021291
+    /https:\/\/boardgamearena\.com\/\d+\/\w+\?table=\d+/.test(location)
+  ) {
+    await attachToGameEndPage();
   }
 }
 
@@ -43,6 +50,7 @@ async function main() {
   (() => {
     let oldPushState = history.pushState;
     history.pushState = function pushState() {
+      log("pushstate", arguments);
       // @ts-expect-error
       let ret = oldPushState.apply(this, arguments);
       // window.dispatchEvent(new Event("pushstate"));
@@ -52,6 +60,7 @@ async function main() {
 
     let oldReplaceState = history.replaceState;
     history.replaceState = function replaceState() {
+      log("replacestate", arguments);
       // @ts-expect-error
       let ret = oldReplaceState.apply(this, arguments);
       // window.dispatchEvent(new Event("replacestate"));
@@ -60,12 +69,14 @@ async function main() {
     };
 
     window.addEventListener("popstate", () => {
+      log("popstate");
       window.dispatchEvent(new Event("locationchange"));
     });
   })();
 
   window.addEventListener("locationchange", async function () {
     // log("location changed!", window.location.href);
+    log("location changed!");
     await locationChanged(window.location.href);
   });
 

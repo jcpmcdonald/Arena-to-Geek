@@ -13,10 +13,13 @@ export const waitForElementToDisplay = async (
   selector: string,
   time: number
 ) => {
+  log("Waiting for element to display:", selector, document);
   let element = document.querySelector(selector);
   while (element === null) {
+    log("Element not found, waiting:", selector, document);
     await sleep(time);
     element = document.querySelector(selector);
   }
+  log("Element found:", selector);
   return Promise.resolve();
 };
